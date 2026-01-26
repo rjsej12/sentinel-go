@@ -2,45 +2,32 @@ package main
 
 import (
 	"context"
-	"log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rjsej12/sentinel-go/internal/health"
+	"github.com/rjsej12/sentinel-go/internal/server"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/ping", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("pong"))
-	})
+	router := server.NewRouter()
+	handler := server.Logging(router)
 
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
-	}
+	httpServer := server.NewHTTPServer(":8080", handler)
 
-	go func() {
-		log.Println("API server started on :8080")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen error: %v", err)
-		}
-	}()
+	health.SetReady(true)
+	httpServer.Start()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
 
-	log.Println("shutting down server...")
+	health.SetReady(false)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("shutdown error: %v", err)
-	}
-
-	log.Println("server stopped")
+	httpServer.Shutdown(ctx)
 }
