@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: sentinel-api
+    ports:
+      - "8080:8080"
+    networks:
+      - sentinel-net
+
+  prometheus:
+    build:
+      context: .
+      dockerfile: docker/prometheus.Dockerfile
+    container_name: sentinel-prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - sentinel-net
+    depends_on:
+      - api
+    volumes:
+      - ./observability/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+
+networks:
+  sentinel-net:
+    driver: bridge
