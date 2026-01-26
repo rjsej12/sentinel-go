@@ -18,6 +18,12 @@ func (r *statusRecorder) WriteHeader(code int) {
 
 func HTTPMetrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Exclude the /metrics endpoint from metrics collection (prevents circular reference)
+		if r.URL.Path == "/metrics" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		start := time.Now()
 
 		recorder := &statusRecorder{
