@@ -8,12 +8,16 @@ import (
 	"time"
 
 	"github.com/rjsej12/sentinel-go/internal/health"
+	"github.com/rjsej12/sentinel-go/internal/metrics"
 	"github.com/rjsej12/sentinel-go/internal/server"
 )
 
 func main() {
+	metrics.Register()
+
 	router := server.NewRouter()
-	handler := server.Logging(router)
+
+	handler := server.Logging(metrics.HTTPMetrics(router))
 
 	httpServer := server.NewHTTPServer(":8080", handler)
 
