@@ -1,0 +1,50 @@
+groups:
+  - name: sentinel_api_slo
+    interval: 30s
+    rules:
+      # SLO: 99.9% availability (error rate < 0.1%)
+      - record: sentinel:http_requests:error_rate
+        expr: |
+          sum(rate(sentinel_http_requests_total{status=~"5.."}[5m])) 
+          / 
+          sum(rate(sentinel_http_requests_total[5m]))
+
+      # SLO: 95% of requests served within 500ms
+      - record: sentinel:http_requests:p95_latency
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(sentinel_http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      # SLO: 99% of requests served within 1s
+      - record: sentinel:http_requests:p99_latency
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(sentinel_http_request_duration_seconds_bucket[5m])) by (le)
+          )
+
+      # SLO violation alert: error rate over 0.1%
+      - alert: SLOErrorRateExceeded
+        expr: |
+          sentinel:http_requests:error_rate > 0.001
+        for: 5m
+        labels:
+          severity: critical
+          service: sentinel-api
+          slo: availability
+        annotations:
+          summary: "SLO Violation: Error Rate Exceeded"
+          description: "The error rate has exceeded 0.1%. Current: {{ $value | humanizePercentage }}"
+
+      # SLO violation alert: p95 latency over 500ms
+      - alert: SLOLatencyExceeded
+        expr: |
+          sentinel:http_requests:p95_latency > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: sentinel-api
+          slo: latency
+        annotations:
+          summary: "SLO Violation: Latency Exceeded"
+          description: "p95 latency has exceeded 500ms. Current: {{ $value }}s"
