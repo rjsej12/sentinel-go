@@ -28,12 +28,22 @@ var (
 		},
 		[]string{"method", "path"},
 	)
+
+	HTTPRequestsInFlight = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "sentinel",
+			Subsystem: "http",
+			Name:      "requests_inflight",
+			Help:      "Number of HTTP requests currently being processed",
+		},
+	)
 )
 
 func Register() {
 	prometheus.MustRegister(
 		HTTPRequestsTotal,
 		HTTPRequestDuration,
+		HTTPRequestsInFlight,
 	)
 }
 

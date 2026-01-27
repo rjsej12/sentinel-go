@@ -24,6 +24,9 @@ func HTTPMetrics(next http.Handler) http.Handler {
 			return
 		}
 
+		HTTPRequestsInFlight.Inc()
+		defer HTTPRequestsInFlight.Dec()
+
 		start := time.Now()
 
 		recorder := &statusRecorder{
