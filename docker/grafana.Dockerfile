@@ -1,0 +1,3 @@
+FROM grafana/grafana:latest
+
+COPY observability/grafana/provisioning /etc/grafana/provisioning

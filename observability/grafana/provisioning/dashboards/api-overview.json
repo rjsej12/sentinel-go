@@ -1,0 +1,170 @@
+{
+    "title": "API Overview",
+    "uid": "api-overview",
+    "tags": [
+        "api",
+        "sentinel"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 0,
+    "refresh": "10s",
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "panels": [
+        {
+            "id": 1,
+            "title": "Request Rate (RPS)",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 0,
+                "w": 12,
+                "h": 8
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(sentinel_http_requests_total[5m]))",
+                    "legendFormat": "Total Requests/sec",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                }
+            }
+        },
+        {
+            "id": 2,
+            "title": "Request Rate by Status Code",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 12,
+                "y": 0,
+                "w": 12,
+                "h": 8
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(sentinel_http_requests_total{status=~\"2..\"}[5m]))",
+                    "legendFormat": "2xx Success",
+                    "refId": "A"
+                },
+                {
+                    "expr": "sum(rate(sentinel_http_requests_total{status=~\"4..\"}[5m]))",
+                    "legendFormat": "4xx Client Error",
+                    "refId": "B"
+                },
+                {
+                    "expr": "sum(rate(sentinel_http_requests_total{status=~\"5..\"}[5m]))",
+                    "legendFormat": "5xx Server Error",
+                    "refId": "C"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                }
+            }
+        },
+        {
+            "id": 3,
+            "title": "Requests In Flight",
+            "type": "stat",
+            "gridPos": {
+                "x": 0,
+                "y": 8,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "sentinel_http_requests_inflight",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "value": null,
+                                "color": "green"
+                            },
+                            {
+                                "value": 10,
+                                "color": "yellow"
+                            },
+                            {
+                                "value": 50,
+                                "color": "red"
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "id": 4,
+            "title": "Total Requests",
+            "type": "stat",
+            "gridPos": {
+                "x": 6,
+                "y": 8,
+                "w": 6,
+                "h": 4
+            },
+            "targets": [
+                {
+                    "expr": "sum(sentinel_http_requests_total)",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short"
+                }
+            }
+        },
+        {
+            "id": 5,
+            "title": "Request Rate by Path",
+            "type": "timeseries",
+            "gridPos": {
+                "x": 0,
+                "y": 12,
+                "w": 24,
+                "h": 8
+            },
+            "targets": [
+                {
+                    "expr": "sum by (path) (rate(sentinel_http_requests_total[5m]))",
+                    "legendFormat": "{{path}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                }
+            }
+        }
+    ]
+}
