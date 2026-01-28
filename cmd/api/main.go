@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,15 +11,24 @@ import (
 	"github.com/rjsej12/sentinel-go/internal/health"
 	"github.com/rjsej12/sentinel-go/internal/metrics"
 	"github.com/rjsej12/sentinel-go/internal/server"
+	"github.com/rjsej12/sentinel-go/internal/worker"
 )
 
 func main() {
 	metrics.Register()
 
-	router := server.NewRouter()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	queueSize := 100
+	queue := worker.NewQueue(ctx, queueSize)
+
+	workerPool := 5
+	processor := worker.NewProcessor(ctx, queue, workerPool)
+	processor.Start()
+
+	router := server.NewRouter(queue, processor)
 	handler := server.Logging(server.HTTPMetrics(router))
-
 	httpServer := server.NewHTTPServer(":8080", handler)
 
 	health.SetReady(true)
@@ -28,10 +38,16 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
 
+	log.Println("Shutting down server...")
 	health.SetReady(false)
+	processor.Stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
 
-	httpServer.Shutdown(ctx)
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Error shutting down server: %v", err)
+	}
+
+	log.Println("Server stopped")
 }
