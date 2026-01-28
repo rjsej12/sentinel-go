@@ -17,7 +17,7 @@ func main() {
 
 	router := server.NewRouter()
 
-	handler := server.Logging(metrics.HTTPMetrics(router))
+	handler := server.Logging(server.HTTPMetrics(router))
 
 	httpServer := server.NewHTTPServer(":8080", handler)
 

@@ -1,44 +1,45 @@
 package metrics
 
 import (
-	"net/http"
-	"strconv"
-	"time"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-type statusRecorder struct {
-	http.ResponseWriter
-	status int
-}
+var (
+	HTTPRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "sentinel",
+			Subsystem: "http",
+			Name:      "requests_total",
+			Help:      "Total number of HTTP requests",
+		},
+		[]string{"method", "path", "status"},
+	)
 
-func (r *statusRecorder) WriteHeader(code int) {
-	r.status = code
-	r.ResponseWriter.WriteHeader(code)
-}
+	HTTPRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: "sentinel",
+			Subsystem: "http",
+			Name:      "request_duration_seconds",
+			Help:      "HTTP request latency",
+			Buckets:   prometheus.DefBuckets,
+		},
+		[]string{"method", "path"},
+	)
 
-func HTTPMetrics(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Exclude the /metrics endpoint from metrics collection (prevents circular reference)
-		if r.URL.Path == "/metrics" {
-			next.ServeHTTP(w, r)
-			return
-		}
+	HTTPRequestsInFlight = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: "sentinel",
+			Subsystem: "http",
+			Name:      "requests_inflight",
+			Help:      "Number of HTTP requests currently being processed",
+		},
+	)
+)
 
-		HTTPRequestsInFlight.Inc()
-		defer HTTPRequestsInFlight.Dec()
-
-		start := time.Now()
-
-		recorder := &statusRecorder{
-			ResponseWriter: w,
-			status:         http.StatusOK,
-		}
-
-		next.ServeHTTP(recorder, r)
-
-		elapsed := time.Since(start).Seconds()
-
-		HTTPRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(elapsed)
-		HTTPRequestsTotal.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(recorder.status)).Inc()
-	})
+func RegisterHTTPMetrics() {
+	prometheus.MustRegister(
+		HTTPRequestsTotal,
+		HTTPRequestDuration,
+		HTTPRequestsInFlight,
+	)
 }
